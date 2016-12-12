@@ -1,28 +1,30 @@
 # cambrian-balance
 
-Get your balance on your Cambrian Credit Union Online Banking account, because 
+Get your balance on your Cambrian Credit Union Online Banking account, because
 their website is just so terrible.
 
 ## Installation
 
-You need Python 3.x with the Requests and CSSSelect library. You almost
-certainly have Python already, so just `pip install requests cssselect`.
-They're popular enough libraries that your distro probably has a package in its
-repositories if you prefer. For Arch, `sudo pacman -S python-requests
-python-cssselect`; for Ubuntu, `sudo apt install python3-requests
-python3-cssselect`.
+You need `Python 3.x` with the `Requests` and `CSSSelect` libraries. You almost
+certainly have Python already, so just:
+
+- Generic: `pip install requests cssselect`.
+- Arch: `sudo pacman -S python-requests python-cssselect`
+- Ubuntu: `sudo apt install python3-requests python3-cssselect`
+
+And put it somewhere in your `$PATH`:
+
+	sudo cp cambrian-balance /usr/local/bin
 
 ## Usage
 
 ### First time
-```
-cambrian-balance <username> -s
-```
+
+	cambrian-balance <username> -s
 
 ### After that
-```
-cambrian-balance
-```
+
+	cambrian-balance
 
 It'll prompt you for your password the first time. Type it in. Then it'll tell
 you your balance on your accounts(s). It saves the password, and cookies so it
