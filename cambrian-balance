@@ -150,7 +150,7 @@ if(args.number != authFile.number or args.password is None or args.savepass):
     args.password=getpass.getpass()
 session = login(args.number, args.password, session=authFile.session)
 print(balance(session))
-if(args.savepass):
+if(args.savepass or (args.number==authFile.number and args.password==authFile.password)):
     with open(authFileName, "wb") as f:
         pickle.dump({
             "number": args.number,
