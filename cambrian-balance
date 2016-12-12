@@ -14,9 +14,10 @@ import pickle
 
 
 class AuthFile:
-    number = None
-    password = None
-    session = None
+    def __init__(self, number=None, password=None, session=None):
+        self.number=number
+        self.password=password
+        self.session=session
 
 
 class AuthError(Exception):
@@ -124,10 +125,7 @@ authFileName = os.path.join(os.path.expanduser("~"), ".cambrian_auth")
 authFile = AuthFile()
 try:
     with open(authFileName, "rb") as f:
-        data = pickle.load(f)
-        authFile.number = data["number"]
-        authFile.password = data["password"]
-        authFile.session = data["session"]
+        authFile = pickle.load(f)
 except FileNotFoundError:
     pass
 
@@ -160,8 +158,4 @@ session = login(args.number, args.password, session=authFile.session)
 print(balance(session))
 if(args.savepass or (args.number == authFile.number and args.password == authFile.password)):
     with open(authFileName, "wb") as f:
-        pickle.dump({
-            "number": args.number,
-            "password": args.password,
-            "session": session
-        }, f)
+        pickle.dump(AuthFile(number=args.number, password=args.password, session=session), f)
