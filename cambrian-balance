@@ -50,69 +50,63 @@ class Page():
 
     @staticmethod
     def getText(e):
-        return e if type(e) is str else etree.tostring(e, method="text", encoding="utf-8").decode("utf-8").strip()
+        if(e is not None):
+            return e if type(e) is str else etree.tostring(e, method="text", encoding="utf-8").decode("utf-8").strip()
+        return None
 
     def getForm(self, formId):
         return {e.attrib["name"]: e.get("value") for e in self.getElements("#{0} input".format(formId))}
 
-class MemberNumberForm(Page):
-    def __init__(self):
-        super().__init__(url="https://online.cambrian.mb.ca/retail/")
+def memberNumberForm(memberNumber, session=None):
+    page=Page(url="https://online.cambrian.mb.ca/retail/", session=session)
+    form=page.getForm("frmLoginRetail")
+    form.pop("btnReset")
+    form["txtCustNo"]=memberNumber
+    return form
 
-    def form(self, memberNumber=None):
-        form=self.getForm("frmLoginRetail")
-        form.pop("btnReset")
-        form["txtCustNo"]=memberNumber
-        return form
+def passwordForm(memberNumberForm, password, session=None):
+    page=Page(
+            url="https://online.cambrian.mb.ca/retail/",
+            method="post",
+            data=memberNumberForm,
+            session=session
+            )
+    form=page.getForm("frmRetailLoginPassword")
+    form.pop("btnClear")
+    form["txtPassword"]=password
+    form["btnSignin"]="SIGN+IN"
+    question=page.getText(page.getElement("#lblQuestion"))
+    if(question):
+        form["txtAnswer"]=input(question + " ")
+    return form
 
-class PasswordForm(Page):
-    def __init__(self, memberNumber):
-        prevForm=MemberNumberForm()
-        super().__init__(
-                url="https://online.cambrian.mb.ca/retail/",
-                method="post",
-                session=prevForm.session,
-                data=prevForm.form(memberNumber)
-                )
+def login(memberNumber, password, session=None):
+    s=session or requests.Session()
+    prevForm=passwordForm(
+            memberNumberForm(memberNumber, session=s),
+            password,
+            session=s
+            )
+    page=Page(
+            url="https://online.cambrian.mb.ca/retail/Retail/RetailLoginPassword.aspx",
+            method="post",
+            session=s,
+            data=prevForm
+            )
+    return s
 
-    @property
-    def question(self):
-        return self.getText(self.getElement("#lblQuestion"))
-
-    def form(self, password=None):
-        form=self.getForm("frmRetailLoginPassword")
-        form.pop("btnClear")
-        form["txtPassword"]=password
-        if(self.question):
-            form["txtAnswer"]=input(self.question + " ")
-        form["btnSignin"]="SIGN+IN"
-        return form
-
-class Login(Page):
-    def __init__(self, memberNumber, password):
-        prevForm=PasswordForm(memberNumber)
-        super().__init__(
-                url="https://online.cambrian.mb.ca/retail/Retail/RetailLoginPassword.aspx",
-                method="post",
-                session=prevForm.session,
-                data=prevForm.form(password)
-                )
-
-class Balance(Page):
-    def __init__(self, session):
-        super().__init__(
-                url="https://online.cambrian.mb.ca/retail/Retail/RetailAccounts.aspx",
-                session=session
-                )
-
-    def accounts(self):
-        table=SingleTable([["Account", "Line of Credit", "Holds", "Avail", "Balance"]] + [
-            [
-                self.getText(ee)
-                for ee in (e.getchildren() if len(e.getchildren()) > 2 else ["Total", "", "", "", e.getchildren()[1]])
-                ] for e in self.getElements("#pnlMain #tblHolder tr:first-of-type table tr[class^=\"TableRow\"]")
-            ])
-        return table.table
+def balance(session):
+    page=Page(
+            url="https://online.cambrian.mb.ca/retail/Retail/RetailAccounts.aspx",
+            session=session
+            )
+    table=SingleTable([["Account", "Line of Credit", "Holds", "Avail", "Balance"]] + [
+        [
+            page.getText(ee)
+            for ee in (e.getchildren() if len(e.getchildren()) > 2 else ["Total", "", "", "", e.getchildren()[1]])
+            ] for e in page.getElements("#pnlMain #tblHolder tr:first-of-type table tr[class^=\"TableRow\"]")
+        ])
+    return table.table
 
     def __str__(self):
         return self.html
@@ -154,11 +148,8 @@ if(args.number is None):
     sys.exit(1)
 if(args.number != authFile.number or args.password is None or args.savepass):
     args.password=getpass.getpass()
-try:
-    session = Login(args.number, args.password).session
-except Exception as e:
-    print(e)
-    sys.exit(2)
+session = login(args.number, args.password, session=authFile.session)
+print(balance(session))
 if(args.savepass):
     with open(authFileName, "wb") as f:
         pickle.dump({
@@ -166,4 +157,3 @@ if(args.savepass):
             "password": args.password,
             "session": session
             }, f)
-print(Balance(session).accounts())
