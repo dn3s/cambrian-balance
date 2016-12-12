@@ -26,9 +26,10 @@ And put it somewhere in your `$PATH`:
 
 	cambrian-balance
 
-It'll prompt you for your password the first time. Type it in. Then it'll tell
-you your balance on your accounts(s). It saves the password, and cookies so it
-won't have to prompt for the security question every time either.
+It'll prompt you for your password and a secret question the first time. Type
+it in. Then it'll tell you your balance on your accounts(s). It saves the
+password, and cookies so it won't have to prompt for the security question
+every time either.
 
 You can add in `-s` and it'll remember your username pasword for you for next
 time (stored in `~/.cambrian_auth`), or overwrite an existing one if you change
