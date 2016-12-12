@@ -3,6 +3,7 @@
 Get your balance on your Cambrian Credit Union Online Banking account, because
 their website is just so terrible.
 
+![screenshot](https://raw.githubusercontent.com/dn3s/cambrian-balance/master/screenshot.png "Screenshot")
 ## Installation
 
 You need `Python 3.x` with the `Requests`, `CSSSelect`, and `terminaltables`
