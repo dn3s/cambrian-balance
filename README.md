@@ -20,17 +20,17 @@ And put it somewhere in your `$PATH`:
 
 ### First time
 
-	cambrian-balance <username> -s
+	cambrian-balance <member-number> -s
+
+You will be prompted to enter your password and answer one of your "secret
+questions". It'll remember the password, and store the cookies so it won't need
+any more answers either!
 
 ### After that
 
 	cambrian-balance
 
-It'll prompt you for your password and a secret question the first time. Type
-it in. Then it'll tell you your balance on your accounts(s). It saves the
-password, and cookies so it won't have to prompt for the security question
-every time either.
-
-You can add in `-s` and it'll remember your username pasword for you for next
-time (stored in `~/.cambrian_auth`), or overwrite an existing one if you change
-your password.
+If you change you're password just add `-s` and it'll prompt you for a new one.
+If you want to check a different account, just type `cambrian-balance
+<different-member-number>` and it'll show you that one instead. add `-s` to
+replace the old member number in the pasword file.
