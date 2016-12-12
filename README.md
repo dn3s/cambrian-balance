@@ -5,12 +5,12 @@ their website is just so terrible.
 
 ## Installation
 
-You need `Python 3.x` with the `Requests` and `CSSSelect` libraries. You almost
-certainly have Python already, so just:
+You need `Python 3.x` with the `Requests`, `CSSSelect`, and `terminaltables`
+libraries. You almost certainly have Python already, so just:
 
-- Generic: `pip install requests cssselect`.
-- Arch: `sudo pacman -S python-requests python-cssselect`
-- Ubuntu: `sudo apt install python3-requests python3-cssselect`
+- Generic: `pip install requests cssselect terminaltables`.
+- Arch: `sudo pacman -S python-requests python-cssselect python-terminaltables`
+- Ubuntu: `sudo apt install python3-requests python3-cssselect python3-pip; sudo pip install terminaltables`
 
 And put it somewhere in your `$PATH`:
 
