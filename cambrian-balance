@@ -1,0 +1,169 @@
+#!/usr/bin/env python
+import sys
+import requests
+import getpass
+import json
+import argparse
+import os
+import time
+from lxml import html, etree
+from lxml.cssselect import CSSSelector
+import unicodedata
+from terminaltables import SingleTable
+import pickle
+
+class AuthFile:
+    number=None
+    password=None
+    session=None
+
+class AuthError(Exception):
+    pass
+
+class Page():
+    def __init__(self, url=None, method="get", data=None, session=None):
+        s=session or requests.session()
+        if(method=="get"):
+            r=s.get(url, data=data)
+        elif(method=="post"):
+            r=s.post(url, data=data)
+        else:
+            raise ValueError("method must be one of [\"get\", \"post\"]")
+        self.html=r.text
+        self.dom=html.fromstring(r.text)
+        self.session=s
+
+    def getElements(self, selector:str):
+        """Return all elements matching the given selector"""
+        if not selector:
+            return None
+        sel=CSSSelector(selector)
+        e=sel(self.dom)
+        return e
+
+    def getElement(self, selector:str):
+        """Return the first element matching the given selector"""
+        e=self.getElements(selector)
+        if(e is not None and len(e)):
+            return e[0]
+        return None
+
+    @staticmethod
+    def getText(e):
+        return e if type(e) is str else etree.tostring(e, method="text", encoding="utf-8").decode("utf-8").strip()
+
+    def getForm(self, formId):
+        return {e.attrib["name"]: e.get("value") for e in self.getElements("#{0} input".format(formId))}
+
+class MemberNumberForm(Page):
+    def __init__(self):
+        super().__init__(url="https://online.cambrian.mb.ca/retail/")
+
+    def form(self, memberNumber=None):
+        form=self.getForm("frmLoginRetail")
+        form.pop("btnReset")
+        form["txtCustNo"]=memberNumber
+        return form
+
+class PasswordForm(Page):
+    def __init__(self, memberNumber):
+        prevForm=MemberNumberForm()
+        super().__init__(
+                url="https://online.cambrian.mb.ca/retail/",
+                method="post",
+                session=prevForm.session,
+                data=prevForm.form(memberNumber)
+                )
+
+    @property
+    def question(self):
+        return self.getText(self.getElement("#lblQuestion"))
+
+    def form(self, password=None):
+        form=self.getForm("frmRetailLoginPassword")
+        form.pop("btnClear")
+        form["txtPassword"]=password
+        if(self.question):
+            form["txtAnswer"]=input(self.question + " ")
+        form["btnSignin"]="SIGN+IN"
+        return form
+
+class Login(Page):
+    def __init__(self, memberNumber, password):
+        prevForm=PasswordForm(memberNumber)
+        super().__init__(
+                url="https://online.cambrian.mb.ca/retail/Retail/RetailLoginPassword.aspx",
+                method="post",
+                session=prevForm.session,
+                data=prevForm.form(password)
+                )
+
+class Balance(Page):
+    def __init__(self, session):
+        super().__init__(
+                url="https://online.cambrian.mb.ca/retail/Retail/RetailAccounts.aspx",
+                session=session
+                )
+
+    def accounts(self):
+        table=SingleTable([["Account", "Line of Credit", "Holds", "Avail", "Balance"]] + [
+            [
+                self.getText(ee)
+                for ee in (e.getchildren() if len(e.getchildren()) > 2 else ["Total", "", "", "", e.getchildren()[1]])
+                ] for e in self.getElements("#pnlMain #tblHolder tr:first-of-type table tr[class^=\"TableRow\"]")
+            ])
+        return table.table
+
+    def __str__(self):
+        return self.html
+
+authFileName=os.path.join(os.path.expanduser("~"), ".cambrian_auth")
+
+authFile=AuthFile()
+try:
+    with open(authFileName, "rb") as f:
+        data=pickle.load(f)
+        authFile.number=data["number"]
+        authFile.password=data["password"]
+        authFile.session=data["session"]
+except FileNotFoundError:
+    pass
+
+parser=argparse.ArgumentParser(
+        description="Get your Peggo card balance"
+        )
+parser.add_argument("number",
+        help="Your Cambrian member number",
+        default=authFile.number,
+        nargs="?"
+        )
+parser.add_argument("password",
+        help="Your Cambrian password",
+        default=authFile.password,
+        nargs="?"
+        )
+parser.add_argument("-s", "--save-auth",
+        action="store_true",
+        dest="savepass",
+        help="Save the pasword and auth cookie so you don't have to type your password/security question every time"
+        )
+args=parser.parse_args()
+
+if(args.number is None):
+    print("Until you save your login, you have to at least specify your member number!")
+    sys.exit(1)
+if(args.number != authFile.number or args.password is None or args.savepass):
+    args.password=getpass.getpass()
+try:
+    session = Login(args.number, args.password).session
+except Exception as e:
+    print(e)
+    sys.exit(2)
+if(args.savepass):
+    with open(authFileName, "wb") as f:
+        pickle.dump({
+            "number": args.number,
+            "password": args.password,
+            "session": session
+            }, f)
+print(Balance(session).accounts())
