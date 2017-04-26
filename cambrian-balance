@@ -130,7 +130,7 @@ except FileNotFoundError:
     pass
 
 parser = argparse.ArgumentParser(
-    description="Get your Peggo card balance"
+    description="Get your Cambrian Credit Union balance"
 )
 parser.add_argument("number",
                     help="Your Cambrian member number",
