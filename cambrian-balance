@@ -12,12 +12,20 @@ from lxml.cssselect import CSSSelector
 import unicodedata
 from terminaltables import SingleTable
 import pickle
+import subprocess
 
 
 class AuthFile:
-    def __init__(self, number=None, password=None, session=None):
+    passName=None
+    password=None
+    def __init__(self, number=None, password=None, passName=None, session=None):
         self.number=number
-        self.password=password
+        if passName:
+            self.passName=passName
+            self.password=None
+        else:
+            self.password=password
+            self.passName=None
         self.session=session
 
 
@@ -151,6 +159,9 @@ def history(session, account, pages=10):
         data.pop("Menu1:btnHelp", None)
     return results
 
+def getStoredPass(name):
+    return subprocess.check_output(["pass", name]).decode("ascii").strip()
+
 authFileName = os.path.join(os.path.expanduser("~"), ".cambrian_auth")
 
 authFile = AuthFile()
@@ -159,6 +170,7 @@ try:
         authFile = pickle.load(f)
 except FileNotFoundError:
     pass
+
 
 parser = argparse.ArgumentParser(
     description="Get your Cambrian Credit Union balance"
@@ -170,8 +182,12 @@ parser.add_argument("number",
                     )
 parser.add_argument("password",
                     help="Your Cambrian password",
-                    default=authFile.password,
+                    default=None,
                     nargs="?"
+                    )
+parser.add_argument("-p", "--pass-name",
+                    dest="passName",
+                    help="Save the pasword and auth cookie so you don't have to type your password/security question every time"
                     )
 parser.add_argument("-s", "--save-auth",
                     action="store_true",
@@ -180,14 +196,23 @@ parser.add_argument("-s", "--save-auth",
                     )
 args = parser.parse_args()
 
+
 if(args.number is None):
     print("Until you save your login, you have to at least specify your member number!")
     sys.exit(1)
-if(args.number != authFile.number or args.password is None or args.savepass):
-    args.password = getpass.getpass()
-session = login(args.number, args.password, session=authFile.session)
+
+if args.passName:
+    password=getStoredPass(args.passName)
+elif authFile.passName and args.number==authFile.number:
+    password=getStoredPass(authFile.passName)
+elif authFile.password and args.number==authFile.number:
+    password=authFile.password
+else:
+    password=getpass.getpass()
+
+session = login(args.number, password, session=authFile.session)
 print(balance(session))
 #print(history(session, 0))
-if(args.savepass or (args.number == authFile.number and args.password == authFile.password)):
+if(args.savepass or (args.number == authFile.number and password == authFile.password and args.passName == authFile.passName)):
     with open(authFileName, "wb") as f:
-        pickle.dump(AuthFile(number=args.number, password=args.password, session=session), f)
+        pickle.dump(AuthFile(number=args.number, passName=args.passName, password=password, session=session), f)
